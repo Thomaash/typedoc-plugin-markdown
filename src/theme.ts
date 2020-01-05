@@ -35,21 +35,45 @@ export default class MarkdownTheme extends Theme {
       template: 'reflection.hbs',
     },
     {
-      kind: [ReflectionKind.Interface],
-      isLeaf: false,
-      directory: 'interfaces',
-      template: 'reflection.hbs',
-    },
-    {
       kind: [ReflectionKind.Enum],
       isLeaf: false,
       directory: 'enums',
       template: 'reflection.hbs',
     },
     {
+      kind: [ReflectionKind.Function],
+      isLeaf: true,
+      directory: 'functions',
+      template: 'reflection.hbs',
+    },
+    {
+      kind: [ReflectionKind.Interface],
+      isLeaf: false,
+      directory: 'interfaces',
+      template: 'reflection.hbs',
+    },
+    {
       kind: [ReflectionKind.Module, ReflectionKind.ExternalModule],
       isLeaf: false,
       directory: 'modules',
+      template: 'reflection.hbs',
+    },
+    {
+      kind: [ReflectionKind.ObjectLiteral],
+      isLeaf: true,
+      directory: 'object-literals',
+      template: 'reflection.hbs',
+    },
+    {
+      kind: [ReflectionKind.TypeAlias],
+      isLeaf: true,
+      directory: 'type-aliases',
+      template: 'reflection.hbs',
+    },
+    {
+      kind: [ReflectionKind.Variable],
+      isLeaf: true,
+      directory: 'variables',
       template: 'reflection.hbs',
     },
   ];
@@ -61,6 +85,9 @@ export default class MarkdownTheme extends Theme {
 
   // creates an isolated Handlebars environment to store context aware helpers
   static handlebars = Handlebars.create();
+
+  /** Mappings from [[MAPPINGS]] that has been selected by the user. */
+  static activeMappings: TemplateMapping[];
 
   // The root of generated docs
   indexName = 'README';
@@ -112,10 +139,8 @@ export default class MarkdownTheme extends Theme {
     return [
       this.indexName + this.fileExt,
       'globals' + this.fileExt,
-      'classes',
-      'enums',
-      'interfaces',
-      'modules',
+      // All the directories created for mappings.
+      ...MarkdownTheme.MAPPINGS.map(({ directory }): string => directory),
       'media',
       '.DS_Store',
     ];
@@ -277,22 +302,7 @@ export default class MarkdownTheme extends Theme {
     }
 
     function getNavigationGroup(reflection: DeclarationReflection) {
-      if (reflection.kind === ReflectionKind.ExternalModule) {
-        return externalModulesNavigation;
-      }
-      if (reflection.kind === ReflectionKind.Module) {
-        return modulesNavigation;
-      }
-      if (reflection.kind === ReflectionKind.Class) {
-        return classesNavigation;
-      }
-      if (reflection.kind === ReflectionKind.Enum) {
-        return enumsNavigation;
-      }
-      if (reflection.kind === ReflectionKind.Interface) {
-        return interfacesNavigation;
-      }
-      return null;
+      return navigationGroups[reflection.kind] || null;
     }
 
     function addNavigationItem(
@@ -333,11 +343,17 @@ export default class MarkdownTheme extends Theme {
     const isLongTitle = this.application.options.getValue('longTitle');
 
     const navigation = createNavigationGroup(project.name, this.indexName + this.fileExt);
-    const externalModulesNavigation = createNavigationGroup('External Modules');
-    const modulesNavigation = createNavigationGroup('Modules');
-    const classesNavigation = createNavigationGroup('Classes');
-    const enumsNavigation = createNavigationGroup('Enums');
-    const interfacesNavigation = createNavigationGroup('Interfaces');
+    const navigationGroups = {
+      [ReflectionKind.Class]: createNavigationGroup('Classes'),
+      [ReflectionKind.Enum]: createNavigationGroup('Enums'),
+      [ReflectionKind.ExternalModule]: createNavigationGroup('External Modules'),
+      [ReflectionKind.Function]: createNavigationGroup('Functions'),
+      [ReflectionKind.Interface]: createNavigationGroup('Interfaces'),
+      [ReflectionKind.Module]: createNavigationGroup('Modules'),
+      [ReflectionKind.ObjectLiteral]: createNavigationGroup('Object Literals'),
+      [ReflectionKind.TypeAlias]: createNavigationGroup('Type Aliases'),
+      [ReflectionKind.Variable]: createNavigationGroup('Variables'),
+    };
 
     if (!isModules) {
       project.groups.forEach(group => {
@@ -362,20 +378,10 @@ export default class MarkdownTheme extends Theme {
       });
     }
 
-    if (externalModulesNavigation.children.length) {
-      navigation.children.push(externalModulesNavigation);
-    }
-    if (modulesNavigation.children.length) {
-      navigation.children.push(modulesNavigation);
-    }
-    if (classesNavigation.children.length) {
-      navigation.children.push(classesNavigation);
-    }
-    if (enumsNavigation.children.length) {
-      navigation.children.push(enumsNavigation);
-    }
-    if (interfacesNavigation.children.length) {
-      navigation.children.push(interfacesNavigation);
+    for (const navigationGroup of Object.values(navigationGroups)) {
+      if (navigationGroup.children.length) {
+        navigation.children.push(navigationGroup);
+      }
     }
 
     return navigation;
@@ -393,7 +399,7 @@ export default class MarkdownTheme extends Theme {
    * @returns           The found mapping or undefined if no mapping could be found.
    */
   static getMapping(reflection: DeclarationReflection): TemplateMapping | undefined {
-    return MarkdownTheme.MAPPINGS.find(mapping => reflection.kindOf(mapping.kind));
+    return MarkdownTheme.activeMappings.find(mapping => reflection.kindOf(mapping.kind));
   }
 
   static formatContents(contents: string) {

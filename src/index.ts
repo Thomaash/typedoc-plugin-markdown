@@ -2,6 +2,7 @@ import { Application } from 'typedoc/dist/lib/application';
 import { ParameterType } from 'typedoc/dist/lib/utils/options/declaration';
 
 import { MarkdownPlugin } from './plugin';
+import MarkdownTheme from './theme';
 
 export = (PluginHost: Application) => {
   const app = PluginHost.owner;
@@ -58,6 +59,17 @@ export = (PluginHost: Application) => {
       'Markdown Plugin: Use long navigation title instead of default short one (applicable to navigation / front-matter only).',
     name: 'longTitle',
     type: ParameterType.Boolean,
+  });
+
+  app.options.addDeclaration({
+    component: 'markdown',
+    help:
+      'Markdown Plugin: ' +
+      'A comma separated list of objects which should be placed in files of their own. ' +
+      `Possible values are: ${MarkdownTheme.MAPPINGS.map(({ directory }): string => directory).join(',')}. ` +
+      'Also special values NONE for a single file and ALL for separate file for each can be used.',
+    name: 'separateFilesFor',
+    type: ParameterType.Array,
   });
 
   app.converter.addComponent('markdown', new MarkdownPlugin(app.converter));

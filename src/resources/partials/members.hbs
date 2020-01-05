@@ -1,3 +1,5 @@
+{{#if groups}}
+
 {{#each groups}}
 
 {{#unless allChildrenHaveOwnDocument}}
@@ -7,3 +9,9 @@
 {{/unless}}
 
 {{/each}}
+
+{{else}}
+
+{{> member hideHr=true}}
+
+{{/if}}

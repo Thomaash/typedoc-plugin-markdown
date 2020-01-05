@@ -27,5 +27,26 @@ export class OptionsComponent extends ContextAwareRendererComponent {
     MarkdownTheme.handlebars.registerHelper('ifSources', function(options) {
       return hideSourceFiles ? options.inverse(this) : options.fn(this);
     });
+
+    const separateFilesFor = (
+      (this.application.options.getValue('separateFilesFor') as string[] | undefined) || [
+        'classes',
+        'enums',
+        'interfaces',
+        'modules',
+      ]
+    ).reduce((acc, val): Set<string> => {
+      acc.add(val);
+      return acc;
+    }, new Set<string>());
+
+    MarkdownTheme.activeMappings = separateFilesFor.has('NONE')
+      ? // All in a single file.
+        []
+      : separateFilesFor.has('ALL')
+      ? // Each in a file of it's own.
+        MarkdownTheme.MAPPINGS.slice()
+      : // Hand picked.
+        MarkdownTheme.MAPPINGS.filter(({ directory }): boolean => separateFilesFor.has(directory));
   }
 }
